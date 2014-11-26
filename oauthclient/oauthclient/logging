@@ -1,0 +1,37 @@
+[loggers]
+keys=root,file
+
+[handlers]
+keys=hand01,hand02
+
+[formatters]
+keys=form01
+
+[logger_root]
+level=NOTSET
+handlers=hand01
+formatter=form01
+
+[logger_file]
+level=NOTSET
+handlers=hand02
+propagate=1
+formatter=form01
+
+[handler_hand01]
+class=StreamHandler
+level=NOTSET
+formatter=form01
+args=(sys.stdout,)
+
+[handler_hand02]
+class=FileHandler
+level=INFO
+formatter=form01
+args=('../lms.log', 'w')
+
+
+[formatter_form01]
+format=F1 %(asctime)s %(levelname)s %(message)s
+datefmt=
+class=logging.Formatter

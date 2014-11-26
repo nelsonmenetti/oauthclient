@@ -2,7 +2,20 @@
 from django.http import HttpResponse
 
 from djoauth2.authorization import make_authorization_endpoint
+from django.shortcuts import render
+from oauthclient.client import getToken, getUserInfo
+import logging
 
+
+def redirect_to_callback(request):
+    logging.info("Code :" + request.GET.get('code', '').strip())
+    token = getToken(request.GET.get('code', '').strip()); 
+    context = {'token': token}
+    request.session['token']=token;
+    request.session['has_token']=True;
+    userInformation = getUserInfo(token)
+    request.session['username']=userInformation.get('username',"")
+    return render(request, 'html/home.html', context)
 
 def missing_redirect_uri(request):
     """ Display an error message when an authorization request fails and has no

@@ -1,6 +1,8 @@
+from base64 import b64encode
 import json
 import requests
-from base64 import b64encode
+from __builtin__ import str
+import logging.config
 
 
 CLIENT_KEY = 'H02o3XvC4vXsZp6oivPc6tje5K50YVsw'
@@ -24,21 +26,21 @@ def getToken(code):
 		'code': code,
 		'grant_type': 'authorization_code',
 	}
-	print ('')
-
 	token_response = requests.post(
 			TOKEN_ENDPOINT,
 			data=data,
 			headers=AUTH_HEADERS)
-	assert_200(token_response)
-
-	token_data = json.loads(token_response.content)
-	print ('')
-	print ('Received access token information:')
-	print ('	 access token:', token_data['access_token'])
-	print ('	refresh token:', token_data.get('refresh_token', ''))
-	print ('	 lifetime (s):', token_data['expires_in'])
-	print ('')
+	
+	token_data ='' 
+	try:
+		assert_200(token_response)
+		token_data = json.loads(token_response.content)	
+		logging.info ('Received access token information:')
+		logging.info ('	access token:'+ token_data['access_token'])
+		logging.info ('	refresh token:'+ token_data.get('refresh_token', ''))
+		logging.info ('	lifetime (s):'+ str(token_data['expires_in']))
+	except ValueError as error:
+		logging.error (error)		
 	return token_data
 
 def refreshToken(refresh_token):
@@ -52,15 +54,16 @@ def refreshToken(refresh_token):
 				data=data,
 				headers=AUTH_HEADERS,
 				verify=False)
-		assert_200(token_response)
-		token_data = json.loads(token_response.content)
-
-		print ('')
-		print ('Exchanged refresh token for access token:')
-		print ('	 access token:', token_data['access_token'])
-		print ('	refresh token:', token_data.get('refresh_token', ''))
-		print ('	 lifetime (s):', token_data['expires_in'])
-		print ('')
+		token_data ='' 
+		try:
+			assert_200(token_response)
+			token_data = json.loads(token_response.content)	
+			logging.info ('Exchanged refresh token for access token:')
+			logging.info ('	access token:'+ token_data['access_token'])
+			logging.info ('	refresh token:'+ token_data.get('refresh_token', ''))
+			logging.info ('	lifetime (s):'+ str(token_data['expires_in']))
+		except ValueError as error:
+			logging.error (error)		
 	return token_data
 
 def invalidateToken(token):
@@ -71,13 +74,15 @@ def invalidateToken(token):
 		},
 		data={},
 		verify=False)
+	try:
+		assert_200(api_resp_logout)
+		logging.info  ('Authenticated API request succeeded (Token Invalidated)! Returned the following content:')
+		logging.info  (api_resp_logout.content)
+		return api_resp_logout.content
+	except ValueError as error:
+		logging.error (error)		
 
-	assert_200(api_resp_logout)
-	print ('')
-	print ('Authenticated API request succeeded (Token Invalidated)! Returned the following content:')
-	print (api_resp_logout.content)
-	print ('')
-	return api_resp_logout.content
+	
 
 def getUserInfo(token):
 	api_resp = requests.get(
@@ -87,14 +92,13 @@ def getUserInfo(token):
 		},
 		data={},
 		verify=False)
-
-	assert_200(api_resp)
-
-	print ('')
-	print ('Authenticated API request succeeded! Returned the following content:')
-	print (api_resp.content)
-	print ('')
-	return api_resp.content
+	try:
+		assert_200(api_resp)
+		logging.info ('Authenticated API request succeeded! Returned the following content:')
+		logging.info (api_resp.content)
+		return api_resp.content
+	except ValueError as error:
+		logging.error (error)	
 
 
 def assert_200(response, max_len=500):
@@ -110,41 +114,39 @@ def assert_200(response, max_len=500):
 
 def main():
 	
+	logging.config.fileConfig("logging", defaults=None, disable_existing_loggers=False)
 
 	scopes = ['user_info']
 	scope_string = ' '.join(scopes)
 
 	auth_url = '{}?scope={}&client_id={}&response_type=code'.format(AUTHORIZATION_ENDPOINT,	scope_string,CLIENT_KEY)
 
-	print ('')
-	print ('Log in via the admin page (username: exampleuser, password: password)')
-	print ('')
-	print ('http://localhost:8080/admin/')
-	print ('')
+	logging.info ('')
+	logging.info ('Log in via the admin page (username: exampleuser, password: password)')
+	logging.info ('')
+	logging.info ('http://localhost:8080/admin/')
+	logging.info ('')
 	raw_input('press return to continue...')
 
-	print ('')
-	print ('Open the following URL in your browser:')
-	print ('')
-	print (auth_url)
-	print ('')
-	print ('Click the "Accept" button to grant this client access to your data. ')
-	print ('Your browser will be redirected to a URL with a "code" parameter; copy ')
-	print ('that value and paste it in below.')
-	print ('')
+	logging.info ('')
+	logging.info ('Open the following URL in your browser:')
+	logging.info ('')
+	logging.info (auth_url)
+	logging.info ('')
+	logging.info ('Click the "Accept" button to grant this client access to your data. ')
+	logging.info ('Your browser will be redirected to a URL with a "code" parameter; copy ')
+	logging.info ('that value and paste it in below.')
+	logging.info ('')
 
 	auth_code = raw_input('code=').strip()
 
 	# Exchange the authorization code for an access token.
 	token_data = getToken(auth_code)
-	raw_input('press return to continue...')
 	# Exchange the refresh token for a new access token, if we received one.
 	refresh_token = token_data.get('refresh_token')
 	token_data=refreshToken(refresh_token)
-	raw_input('press return to continue...')
 	# Make an API request, authenticating with our recently received access token.
 	getUserInfo(token_data)  
-	raw_input('press return to continue...')
 	# Make an API request to logout the user
 	invalidateToken(token_data)
 
